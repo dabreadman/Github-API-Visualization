@@ -1,14 +1,12 @@
-const titleText = "Mutual Following Count";
-const xAxisLabelText = "Count";
-
-const svg = d3.select("svg");
-
-const width = +svg.attr("width");
-const height = +svg.attr("height");
-
-const render = (data) => {
-  const xValue = (d) => d["count"];
-  const yValue = (d) => d.login;
+// Renders horizontal bar charts with X and Y-axis in target pointed by CSS selector
+// data[0]: Y-axis
+// data[1]: X-axis
+const render = (data, selector, titleText, xAxisText, prefix) => {
+  const svg = d3.select(selector);
+  const width = +svg.attr("width");
+  const height = +svg.attr("height");
+  const xValue = (d) => Object.values(d)[1];
+  const yValue = (d) => Object.values(d)[0];
   const margin = { top: 50, right: 40, bottom: 77, left: 180 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
@@ -54,23 +52,22 @@ const render = (data) => {
     .attr("y", 65)
     .attr("x", innerWidth / 2)
     .attr("fill", "black")
-    .text(xAxisLabelText);
+    .text(xAxisText);
 
   g.selectAll("rect")
     .data(data)
     .enter()
     .append("rect")
+    .text((data) => `${prefix}:${Object.values(data)[0]}`)
     .attr("y", (d) => yScale(yValue(d)))
     .attr("width", (d) => xScale(xValue(d)))
-    .attr("height", yScale.bandwidth());
+    .attr("height", yScale.bandwidth())
+    .attr(
+      "onclick",
+      (data) => `window.open('https://github.com/${Object.values(data)[0]}');`
+    );
 
   g.append("text").attr("class", "title").attr("y", -10).text(titleText);
-};
-
-const authObj = {
-  headers: {
-    Authorization: "token <token>",
-  },
 };
 
 // Get bidirectional followings for a login
@@ -107,8 +104,26 @@ async function getDual(login) {
   }
 }
 
+// Get total repo count for a login
+async function getRepos(login) {
+  try {
+    const repo = await fetch(
+      `https://api.github.com/users/${login}/repos`,
+      authObj
+    )
+      .then((res) => res.json())
+      .catch((err) => {
+        console.log(err);
+      });
+
+    return repo;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
 // Get array of bidirectional followings for logins step of 1 from login, self-inclusive
-async function getDualSpread(login) {
+async function getData(login) {
   try {
     let socialSpace = [login];
     const followers = await fetch(
@@ -128,27 +143,63 @@ async function getDualSpread(login) {
         console.log(err);
       });
 
+    // Get unique logins social space of 1
     followers.forEach((entry) => socialSpace.push(entry.login));
     following.forEach((entry) => socialSpace.push(entry.login));
-
-    let dict = [];
     let uniqueLogins = [...new Set(socialSpace)];
 
+    // Push dual followings into a dictionary
+    let dualFollower = [];
     await Promise.all(
       uniqueLogins.map(async (login) => {
         const dups = await getDual(login);
-        console.log(dups);
-        dict.push({ login: login, count: dups.length });
-        return;
+        dualFollower.push({ login: login, count: dups.length });
       })
     );
-    return dict;
+
+    // Push repo counts into a dictionary
+    let reposArr = [];
+    await Promise.all(
+      uniqueLogins.map(async (login) => {
+        const repo = await getRepos(login);
+        reposArr.push({ login: login, count: repo.length });
+      })
+    );
+
+    return [dualFollower, reposArr];
   } catch (err) {
     console.log(err);
   }
 }
 
-getDualSpread("dabreadman").then((data) => {
-  render(data);
-});
+let authObj;
+// Get data from Github API and renders visualization
+const generateCharts = (login, auth) => {
+  authObj = {
+    headers: {
+      Authorization: `token ${auth}`,
+    },
+  };
+  getData(login).then((data) => {
+    render(data[0], "#table1", "Mutual Following", "Counts", "t1");
+    render(data[1], "#table2", "Total Repositories", "Count", "t2");
+  });
+};
 
+// Removed rendered components
+const update = (target) => {
+  d3.selectAll(target).selectAll("*").remove();
+};
+
+// Listener for submit button and kick off visualization
+let search = document.getElementById("credentials");
+if (search) {
+  search.addEventListener("submit", (ref) => {
+    ref.preventDefault();
+    update("svg");
+    generateCharts(
+      document.getElementById("login").value,
+      document.getElementById("authToken").value
+    );
+  });
+}
