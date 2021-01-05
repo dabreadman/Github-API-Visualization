@@ -3,9 +3,30 @@
   <head>
     <title>Mutual Following</title>
     <script src="https://d3js.org/d3.v4.js"></script>
+    <style>
+      .body {
+        background-image: url("https://amymhaddad.s3.amazonaws.com/morocco-blue.png");
+      }
+      rect {
+        fill: burlywood;
+      }
+    </style>
   </head>
   <body>
-    <svg width="960" height="500"></svg>
+    <form id="credentials" action="generateCharts()">
+      Login :
+      <input type="text" id="login" name="login" placeholder="Login" />
+      Personal Access Token:
+      <input
+        type="password"
+        id="authToken"
+        name="authToken"
+        placeholder="Personal Access Token"
+      />
+      <button type="submit">Run</button>
+    </form>
+    <svg id="table1" width="960" height="800"></svg>
+    <svg id="table2" width="960" height="800"></svg>
     <script src="index.js"></script>
   </body>
 </html>
