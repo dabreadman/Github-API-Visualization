@@ -1,74 +1,10 @@
-// Renders horizontal bar charts with X and Y-axis in target pointed by CSS selector
-// data[0]: Y-axis
-// data[1]: X-axis
-const render = (data, selector, titleText, xAxisText, prefix) => {
-  const svg = d3.select(selector);
-  const width = +svg.attr("width");
-  const height = +svg.attr("height");
-  const xValue = (d) => Object.values(d)[1];
-  const yValue = (d) => Object.values(d)[0];
-  const margin = { top: 50, right: 40, bottom: 77, left: 180 };
-  const innerWidth = width - margin.left - margin.right;
-  const innerHeight = height - margin.top - margin.bottom;
-
-  const xScale = d3
-    .scaleLinear()
-    .domain([0, d3.max(data, xValue)])
-    .range([0, innerWidth]);
-
-  const yScale = d3
-    .scaleBand()
-    .domain(data.map(yValue))
-    .range([0, innerHeight])
-    .padding(0.1);
-
-  const g = svg
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  const xAxisTickFormat = (number) =>
-    d3.format(".3s")(number).replace("G", "B");
-
-  const xAxis = d3
-    .axisBottom(xScale)
-    .tickFormat(xAxisTickFormat)
-    .tickSize(-innerHeight);
-
-  g.append("g")
-    .call(d3.axisLeft(yScale))
-    .selectAll(".domain, .tick line")
-    .remove();
-
-  const xAxisG = g
-    .append("g")
-    .call(xAxis)
-    .attr("transform", `translate(0,${innerHeight})`);
-
-  xAxisG.select(".domain").remove();
-
-  xAxisG
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("y", 65)
-    .attr("x", innerWidth / 2)
-    .attr("fill", "black")
-    .text(xAxisText);
-
-  g.selectAll("rect")
-    .data(data)
-    .enter()
-    .append("rect")
-    .text((data) => `${prefix}:${Object.values(data)[0]}`)
-    .attr("y", (d) => yScale(yValue(d)))
-    .attr("width", (d) => xScale(xValue(d)))
-    .attr("height", yScale.bandwidth())
-    .attr(
-      "onclick",
-      (data) => `window.open('https://github.com/${Object.values(data)[0]}');`
-    );
-
-  g.append("text").attr("class", "title").attr("y", -10).text(titleText);
-};
+// Sort JSON by attribute
+function sortJSON(json, attr) {
+  json.sort(function (a, b) {
+    return b[attr] - a[attr];
+  });
+  return json;
+}
 
 // Fetch data from Github API by attribute
 async function getAPIData(login, attribute, pageLimit = 5, perPage = 100) {
@@ -165,13 +101,90 @@ async function getLoginData(login) {
         repos.push({ login: login, count: repo.length });
       })
     );
-
-    return [mutualFollowers, repos];
+    const sortedMT = sortJSON(mutualFollowers, "count");
+    const sortRepo = sortJSON(repos, "count");
+    return [sortedMT, sortRepo];
   } catch (err) {
     console.log(err);
   }
 }
 
+// Removed rendered components
+function update(target) {
+  d3.selectAll(target).selectAll("*").remove();
+}
+
+// Renders horizontal bar charts with X and Y-axis in target pointed by CSS selector
+// data[0]: Y-axis
+// data[1]: X-axis
+const render = (data, selector, titleText, xAxisText, prefix) => {
+  const svg = d3.select(selector);
+  const width = +svg.attr("width");
+  const height = +svg.attr("height");
+  const xValue = (d) => Object.values(d)[1];
+  const yValue = (d) => Object.values(d)[0];
+  const margin = { top: 50, right: 40, bottom: 77, left: 180 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, xValue)])
+    .range([0, innerWidth]);
+
+  const yScale = d3
+    .scaleBand()
+    .domain(data.map(yValue))
+    .range([0, innerHeight])
+    .padding(0.1);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const xAxisTickFormat = (number) =>
+    d3.format(".3s")(number).replace("G", "B");
+
+  const xAxis = d3
+    .axisBottom(xScale)
+    .tickFormat(xAxisTickFormat)
+    .tickSize(-innerHeight);
+
+  g.append("g")
+    .call(d3.axisLeft(yScale))
+    .selectAll(".domain, .tick line")
+    .remove();
+
+  const xAxisG = g
+    .append("g")
+    .call(xAxis)
+    .attr("transform", `translate(0,${innerHeight})`);
+
+  xAxisG.select(".domain").remove();
+
+  xAxisG
+    .append("text")
+    .attr("class", "axis-label")
+    .attr("y", 65)
+    .attr("x", innerWidth / 2)
+    .attr("fill", "black")
+    .text(xAxisText);
+
+  g.selectAll("rect")
+    .data(data)
+    .enter()
+    .append("rect")
+    .text((data) => `${prefix}:${Object.values(data)[0]}`)
+    .attr("y", (d) => yScale(yValue(d)))
+    .attr("width", (d) => xScale(xValue(d)))
+    .attr("height", yScale.bandwidth())
+    .attr(
+      "onclick",
+      (data) => `window.open('https://github.com/${Object.values(data)[0]}');`
+    );
+
+  g.append("text").attr("class", "title").attr("y", -10).text(titleText);
+};
 let authObj;
 // Get data from Github API and renders visualization
 const generateCharts = async (login, auth) => {
@@ -191,11 +204,6 @@ const generateCharts = async (login, auth) => {
       });
     }
   });
-};
-
-// Removed rendered components
-const update = (target) => {
-  d3.selectAll(target).selectAll("*").remove();
 };
 
 // Listener for submit button and kick off visualization
