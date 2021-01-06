@@ -3,14 +3,6 @@
   <head>
     <title>Mutual Following</title>
     <script src="https://d3js.org/d3.v4.js"></script>
-    <style>
-      .body {
-        background-image: url("https://amymhaddad.s3.amazonaws.com/morocco-blue.png");
-      }
-      rect {
-        fill: burlywood;
-      }
-    </style>
   </head>
   <body>
     <form id="credentials" action="generateCharts()">
@@ -23,8 +15,13 @@
         name="authToken"
         placeholder="Personal Access Token"
       />
-      <text id="error"></text>
+      <text id="status"></text>
       <button type="submit">Run</button>
+      
+      <text onclick="window.open('https://github.com/settings/tokens/new')"
+          >Get Token</a
+        >
+      </button>
     </form>
     <svg id="table1" width="960" height="800"></svg>
     <svg id="table2" width="960" height="800"></svg>
