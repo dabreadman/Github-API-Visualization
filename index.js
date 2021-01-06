@@ -70,25 +70,42 @@ const render = (data, selector, titleText, xAxisText, prefix) => {
   g.append("text").attr("class", "title").attr("y", -10).text(titleText);
 };
 
-// Get bidirectional followings for a login
-async function getDual(login) {
+// Fetch data from Github API by attribute
+async function getAPIData(login, attribute, pageLimit = 5, perPage = 100) {
   try {
-    const followers = await fetch(
-      `https://api.github.com/users/${login}/followers`,
-      authObj
-    )
-      .then((res) => res.json())
-      .catch((err) => {
-        console.log(err);
-      });
-    const followings = await fetch(
-      `https://api.github.com/users/${login}/following`,
-      authObj
-    )
-      .then((res) => res.json())
-      .catch((err) => {
-        console.log(err);
-      });
+    const attrs = [];
+    let done = false;
+    for (let page = 1; page <= pageLimit && !done; page++) {
+      await fetch(
+        `https://api.github.com/users/${login}/${attribute}?page=${page}&per_page=${perPage}`,
+        authObj
+      )
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.length > 0) {
+            attrs.push(...res);
+            if (res.length < 100) {
+              done = true;
+            }
+          } else {
+            done = true;
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+    return attrs;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Get mutual followings for a login
+async function getMutual(login) {
+  try {
+    const followers = await getAPIData(login, "followers");
+    const followings = await getAPIData(login, "following");
 
     let duplicate = [];
     followers.forEach(function (follower) {
@@ -104,18 +121,15 @@ async function getDual(login) {
   }
 }
 
-// Get total repo count for a login
-async function getRepos(login) {
+// Validate user login, return false if login invalid
+async function validateUserName(login) {
   try {
-    const repo = await fetch(
-      `https://api.github.com/users/${login}/repos`,
-      authObj
-    )
+    const repo = await fetch(`https://api.github.com/users/${login}`, authObj)
       .then((res) => res.json())
+      .then((res) => (res.message === "Not Found" ? false : true))
       .catch((err) => {
         console.log(err);
       });
-
     return repo;
   } catch (err) {
     console.log(err);
@@ -123,50 +137,36 @@ async function getRepos(login) {
 }
 
 // Get array of bidirectional followings for logins step of 1 from login, self-inclusive
-async function getData(login) {
+async function getLoginData(login) {
   try {
     let socialSpace = [login];
-    const followers = await fetch(
-      `https://api.github.com/users/${login}/followers`,
-      authObj
-    )
-      .then((res) => res.json())
-      .catch((err) => {
-        console.log(err);
-      });
-    const following = await fetch(
-      `https://api.github.com/users/${login}/following`,
-      authObj
-    )
-      .then((res) => res.json())
-      .catch((err) => {
-        console.log(err);
-      });
+    const followers = await getAPIData(login, "followers");
+    const followings = await getAPIData(login, "following");
 
     // Get unique logins social space of 1
     followers.forEach((entry) => socialSpace.push(entry.login));
-    following.forEach((entry) => socialSpace.push(entry.login));
+    followings.forEach((entry) => socialSpace.push(entry.login));
     let uniqueLogins = [...new Set(socialSpace)];
 
-    // Push dual followings into a dictionary
-    let dualFollower = [];
+    // Push mutual followings into a dictionary
+    let mutualFollowers = [];
     await Promise.all(
       uniqueLogins.map(async (login) => {
-        const dups = await getDual(login);
-        dualFollower.push({ login: login, count: dups.length });
+        const dups = await getMutual(login);
+        mutualFollowers.push({ login: login, count: dups.length });
       })
     );
 
     // Push repo counts into a dictionary
-    let reposArr = [];
+    let repos = [];
     await Promise.all(
       uniqueLogins.map(async (login) => {
-        const repo = await getRepos(login);
-        reposArr.push({ login: login, count: repo.length });
+        const repo = await getAPIData(login, "repos");
+        repos.push({ login: login, count: repo.length });
       })
     );
 
-    return [dualFollower, reposArr];
+    return [mutualFollowers, repos];
   } catch (err) {
     console.log(err);
   }
@@ -174,15 +174,22 @@ async function getData(login) {
 
 let authObj;
 // Get data from Github API and renders visualization
-const generateCharts = (login, auth) => {
+const generateCharts = async (login, auth) => {
   authObj = {
     headers: {
       Authorization: `token ${auth}`,
     },
   };
-  getData(login).then((data) => {
-    render(data[0], "#table1", "Mutual Following", "Counts", "t1");
-    render(data[1], "#table2", "Total Repositories", "Count", "t2");
+  validateUserName(login).then((res) => {
+    if (!res) {
+      document.getElementById("error").innerHTML = "Error";
+    } else {
+      document.getElementById("error").innerHTML = "Loading!";
+      getLoginData(login).then((data) => {
+        render(data[0], "#table1", "Mutual Following", "Counts", "t1");
+        render(data[1], "#table2", "Total Repositories", "Count", "t2");
+      });
+    }
   });
 };
 
@@ -197,9 +204,13 @@ if (search) {
   search.addEventListener("submit", (ref) => {
     ref.preventDefault();
     update("svg");
-    generateCharts(
-      document.getElementById("login").value,
-      document.getElementById("authToken").value
-    );
+    try {
+      generateCharts(
+        document.getElementById("login").value,
+        document.getElementById("authToken").value
+      );
+    } catch {
+      console.log("something");
+    }
   });
 }
