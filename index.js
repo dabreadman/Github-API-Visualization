@@ -72,7 +72,7 @@ async function validateUserName(login) {
   }
 }
 
-// Get array of bidirectional followings for logins step of 1 from login, self-inclusive
+// Get metrics of the social space of 1 from login
 async function getLoginData(login) {
   try {
     let socialSpace = [login];
@@ -117,7 +117,7 @@ function update(target) {
 // Renders horizontal bar charts with X and Y-axis in target pointed by CSS selector
 // data[0]: Y-axis
 // data[1]: X-axis
-const render = (data, selector, titleText, xAxisText, prefix) => {
+const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
   const svg = d3.select(selector);
   const width = +svg.attr("width");
   const height = +svg.attr("height");
@@ -174,17 +174,29 @@ const render = (data, selector, titleText, xAxisText, prefix) => {
     .data(data)
     .enter()
     .append("rect")
-    .text((data) => `${prefix}:${Object.values(data)[0]}`)
+    .attr("id", (data) => `${prefix}:${Object.values(data)[0]}`)
     .attr("y", (d) => yScale(yValue(d)))
     .attr("width", (d) => xScale(xValue(d)))
     .attr("height", yScale.bandwidth())
     .attr(
       "onclick",
-      (data) => `window.open('https://github.com/${Object.values(data)[0]}');`
+      (data) =>
+        `window.open('https://github.com/${
+          Object.values(data)[0]
+        }${linkprefix}');`
     );
 
   g.append("text").attr("class", "title").attr("y", -10).text(titleText);
 };
+
+function getRanking(json, login) {
+  return (
+    json.findIndex(function (item, i) {
+      return item.login === login;
+    }) + 1
+  );
+}
+
 let authObj;
 // Get data from Github API and renders visualization
 const generateCharts = async (login, auth) => {
@@ -195,15 +207,36 @@ const generateCharts = async (login, auth) => {
   };
   validateUserName(login).then((res) => {
     if (!res) {
-      document.getElementById("error").innerHTML = "Error";
+      document.getElementById("status").innerHTML = "Error";
     } else {
-      document.getElementById("error").innerHTML = "Loading!";
+      document.getElementById("status").innerHTML = "Loading!";
       getLoginData(login).then((data) => {
-        render(data[0], "#table1", "Mutual Following", "Counts", "t1");
-        render(data[1], "#table2", "Total Repositories", "Count", "t2");
+        let ranking = getRanking(data[0], login);
+        render(
+          data[0],
+          "#table1",
+          "Mutual Following",
+          `Counts: Placed ${ranking} at ${
+            data[0][ranking + 1]["count"]
+          } mutual followers`,
+          "t1",
+          ""
+        );
+        ranking = getRanking(data[1], login);
+        render(
+          data[1],
+          "#table2",
+          "Total Repositories",
+          `Counts: Placed ${ranking} at ${
+            data[1][ranking + 1]["count"]
+          } repositories`,
+          "t2",
+          "?tab=repositories"
+        );
       });
     }
   });
+  return;
 };
 
 // Listener for submit button and kick off visualization
@@ -217,8 +250,8 @@ if (search) {
         document.getElementById("login").value,
         document.getElementById("authToken").value
       );
-    } catch {
-      console.log("something");
+    } catch (err) {
+      console.log(err);
     }
   });
 }
