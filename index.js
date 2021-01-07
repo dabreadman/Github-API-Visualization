@@ -57,12 +57,11 @@ async function getMutual(login) {
   }
 }
 
-// Validate user login, return false if login invalid
-async function validateUserName(login) {
+// Validate user data, return false if login or auth is invalid
+async function validateUserData(login) {
   try {
     const repo = await fetch(`https://api.github.com/users/${login}`, authObj)
-      .then((res) => res.json())
-      .then((res) => (res.message === "Not Found" ? false : true))
+      .then((res) => (res.status === 200 ? true : false))
       .catch((err) => {
         console.log(err);
       });
@@ -168,6 +167,7 @@ const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
     .attr("y", 65)
     .attr("x", innerWidth / 2)
     .attr("fill", "black")
+    .attr("id", prefix)
     .text(xAxisText);
 
   g.selectAll("rect")
@@ -199,59 +199,256 @@ function getRanking(json, login) {
 
 let authObj;
 // Get data from Github API and renders visualization
-const generateCharts = async (login, auth) => {
-  authObj = {
-    headers: {
-      Authorization: `token ${auth}`,
-    },
-  };
-  validateUserName(login).then((res) => {
-    if (!res) {
-      document.getElementById("status").innerHTML = "Error";
-    } else {
-      document.getElementById("status").innerHTML = "Loading!";
-      getLoginData(login).then((data) => {
-        let ranking = getRanking(data[0], login);
-        render(
-          data[0],
-          "#table1",
-          "Mutual Following",
-          `Counts: Placed ${ranking} at ${
-            data[0][ranking + 1]["count"]
-          } mutual followers`,
-          "t1",
-          ""
-        );
-        ranking = getRanking(data[1], login);
-        render(
-          data[1],
-          "#table2",
-          "Total Repositories",
-          `Counts: Placed ${ranking} at ${
-            data[1][ranking + 1]["count"]
-          } repositories`,
-          "t2",
-          "?tab=repositories"
-        );
-      });
-    }
-  });
+const generateCharts = async (login, auth, data = []) => {
+  // if no login or auth provided, generates sample labels
+  if (data.length > 0) {
+    render(data[0], "#table1", "Sample Title1", "Sample Label1", "ex1", "");
+    render(data[1], "#table2", "Sample Title2", "Sample Label2", "ex2", "");
+  } else {
+    authObj = {
+      headers: {
+        Authorization: `token ${auth}`,
+      },
+    };
+    validateUserData(login).then((res) => {
+      if (!res) {
+        document.getElementById("status").innerHTML =
+          "Invalid Data, check input";
+        initCharts();
+      } else {
+        document.getElementById("status").innerHTML =
+          "Valid Username and Auth token";
+        getLoginData(login).then((data) => {
+          let ranking = getRanking(data[0], login);
+          render(
+            data[0],
+            "#table1",
+            "Mutual Following",
+            `Counts: Placed ${ranking} at ${
+              data[0][ranking - 1]["count"]
+            } mutual followers`,
+            "t1",
+            ""
+          );
+          ranking = getRanking(data[1], login);
+          render(
+            data[1],
+            "#table2",
+            "Total Repositories",
+            `Counts: Placed ${ranking} at ${
+              data[1][ranking - 1]["count"]
+            } repositories`,
+            "t2",
+            "?tab=repositories"
+          );
+        });
+      }
+    });
+  }
   return;
 };
 
-// Listener for submit button and kick off visualization
-let search = document.getElementById("credentials");
-if (search) {
-  search.addEventListener("submit", (ref) => {
-    ref.preventDefault();
-    update("svg");
-    try {
-      generateCharts(
-        document.getElementById("login").value,
-        document.getElementById("authToken").value
-      );
-    } catch (err) {
-      console.log(err);
-    }
-  });
+// Listener for form submission
+document.getElementById("submitBtn").onclick = function () {
+  update("svg");
+  try {
+    generateCharts(
+      document.getElementById("login").value,
+      document.getElementById("authToken").value
+    );
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+// Listener for bar coloring
+document.getElementById("colorBtn").onclick = function () {
+  clearBar();
+  colorBar(document.getElementById("login").value);
+};
+
+// Colors bar of login
+function colorBar(login) {
+  const res = document.querySelectorAll(`[id$=${login}]`);
+  res.forEach((ele) => ele.setAttribute("fill", "red"));
 }
+
+// Clears colored bar
+function clearBar() {
+  const res = document.querySelectorAll(`[fill="red"]`);
+  res.forEach((ele) => ele.setAttribute("fill", "black"));
+}
+
+// Generates initial charts
+function initCharts() {
+  // Dummy data for initial chart generation
+  const dummyData = [
+    [
+      {
+        login: "ahmhly",
+        count: 31,
+      },
+      {
+        login: "daban",
+        count: 25,
+      },
+      {
+        login: "hry2",
+        count: 24,
+      },
+      {
+        login: "rivanum",
+        count: 22,
+      },
+      {
+        login: "kaprz",
+        count: 20,
+      },
+      {
+        login: "Amuman",
+        count: 20,
+      },
+      {
+        login: "le2jan",
+        count: 19,
+      },
+      {
+        login: "enbrrton",
+        count: 14,
+      },
+      {
+        login: "Keeyo",
+        count: 14,
+      },
+      {
+        login: "Hu99",
+        count: 13,
+      },
+      {
+        login: "Daugent",
+        count: 13,
+      },
+      {
+        login: "xily",
+        count: 11,
+      },
+      {
+        login: "dana5",
+        count: 10,
+      },
+      {
+        login: "Myikub",
+        count: 8,
+      },
+      {
+        login: "Breanobus",
+        count: 6,
+      },
+      {
+        login: "Sekt",
+        count: 6,
+      },
+      {
+        login: "AlonXD",
+        count: 5,
+      },
+      {
+        login: "barb8",
+        count: 3,
+      },
+      {
+        login: "dev2nz",
+        count: 2,
+      },
+      {
+        login: "mett-h1",
+        count: 1,
+      },
+    ],
+    [
+      {
+        login: "Daugent",
+        count: 13,
+      },
+      {
+        login: "xily",
+        count: 11,
+      },
+      {
+        login: "dana5",
+        count: 10,
+      },
+      {
+        login: "le2jan",
+        count: 9,
+      },
+      {
+        login: "Myikub",
+        count: 8,
+      },
+      {
+        login: "Breanobus",
+        count: 6,
+      },
+      {
+        login: "Sekt",
+        count: 6,
+      },
+      {
+        login: "AlonXD",
+        count: 5,
+      },
+      {
+        login: "enbrrton",
+        count: 4,
+      },
+      {
+        login: "hry2",
+        count: 4,
+      },
+      {
+        login: "Keeyo",
+        count: 4,
+      },
+      {
+        login: "barb8",
+        count: 3,
+      },
+      {
+        login: "ahmhly",
+        count: 3,
+      },
+      {
+        login: "Hu99",
+        count: 3,
+      },
+      {
+        login: "daban",
+        count: 2,
+      },
+      {
+        login: "kaprz",
+        count: 2,
+      },
+      {
+        login: "rivanum",
+        count: 2,
+      },
+      {
+        login: "Amuman",
+        count: 2,
+      },
+      {
+        login: "dev2nz",
+        count: 2,
+      },
+      {
+        login: "mett-h1",
+        count: 1,
+      },
+    ],
+  ];
+  generateCharts("", "", dummyData);
+}
+
+initCharts();
