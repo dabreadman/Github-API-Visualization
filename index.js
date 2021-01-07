@@ -167,7 +167,6 @@ const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
     .attr("y", 65)
     .attr("x", innerWidth / 2)
     .attr("fill", "black")
-    .attr("id", prefix)
     .text(xAxisText);
 
   g.selectAll("rect")
@@ -178,6 +177,7 @@ const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
     .attr("y", (d) => yScale(yValue(d)))
     .attr("width", (d) => xScale(xValue(d)))
     .attr("height", yScale.bandwidth())
+    .attr("value", (d) => d.count)
     .attr(
       "onclick",
       (data) =>
@@ -186,7 +186,11 @@ const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
         }${linkprefix}');`
     );
 
-  g.append("text").attr("class", "title").attr("y", -10).text(titleText);
+  g.append("text")
+    .attr("class", "title")
+    .attr("y", -10)
+    .attr("id", prefix)
+    .text(titleText);
 };
 
 function getRanking(json, login) {
@@ -202,8 +206,22 @@ let authObj;
 const generateCharts = async (login, auth, data = []) => {
   // if no login or auth provided, generates sample labels
   if (data.length > 0) {
-    render(data[0], "#table1", "Sample Title1", "Sample Label1", "ex1", "");
-    render(data[1], "#table2", "Sample Title2", "Sample Label2", "ex2", "");
+    render(
+      data[0],
+      "#table1",
+      "Sample Title1",
+      `Counts: Placed 0 at 0 sample metric 1`,
+      "ex1",
+      ""
+    );
+    render(
+      data[1],
+      "#table2",
+      "Sample Title2",
+      `Counts: Placed 0 at 0 sample metric 2`,
+      "ex2",
+      ""
+    );
   } else {
     authObj = {
       headers: {
@@ -263,8 +281,20 @@ document.getElementById("submitBtn").onclick = function () {
 
 // Listener for bar coloring
 document.getElementById("colorBtn").onclick = function () {
+  const login = document.getElementById("login").value;
   clearBar();
-  colorBar(document.getElementById("login").value);
+  colorBar(login);
+  const res = document.querySelectorAll(`[id$=${login}]`);
+  res.forEach((entry) => {
+    const prefix = entry.id.substring(0, entry.id.indexOf(":"));
+    const textElement = document.getElementById(prefix);
+    const res = entry.__data__;
+    let previousText = textElement.textContent;
+    const delimiterIndex = previousText.indexOf(":");
+    if (delimiterIndex >= 0)
+      previousText = previousText.substring(0, delimiterIndex);
+    textElement.innerHTML = previousText.concat(`: ${res.count}`);
+  });
 };
 
 // Colors bar of login
