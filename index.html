@@ -5,24 +5,22 @@
     <script src="https://d3js.org/d3.v4.js"></script>
   </head>
   <body>
-    <form id="credentials" action="generateCharts()">
-      Login :
-      <input type="text" id="login" name="login" placeholder="Login" />
-      Personal Access Token:
-      <input
-        type="password"
-        id="authToken"
-        name="authToken"
-        placeholder="Personal Access Token"
-      />
-      <text id="status"></text>
-      <button type="submit">Run</button>
-      
-      <text onclick="window.open('https://github.com/settings/tokens/new')"
-          >Get Token</a
-        >
-      </button>
-    </form>
+    <button id="colorBtn">Colors bar</button>
+    Login :
+    <input type="text" id="login" name="login" placeholder="Login" />
+    Personal Access Token:
+    <input
+      type="password"
+      id="authToken"
+      name="authToken"
+      placeholder="Personal Access Token"
+    />
+    <text id="status"></text>
+    <button id="submitBtn">Run</button>
+    <button onclick="window.open('https://github.com/settings/tokens/new')">
+      Get Token
+    </button>
+
     <svg id="table1" width="960" height="800"></svg>
     <svg id="table2" width="960" height="800"></svg>
     <script src="index.js"></script>
