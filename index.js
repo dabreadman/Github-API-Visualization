@@ -212,7 +212,7 @@ const generateCharts = async (login, auth, data = []) => {
       "Sample Title2",
       `Sample Metric 2 Count`,
       "ex2",
-      ""
+      "?tab=repositories"
     );
   } else {
     authObj = {
