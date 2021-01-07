@@ -193,14 +193,6 @@ const render = (data, selector, titleText, xAxisText, prefix, linkprefix) => {
     .text(titleText);
 };
 
-function getRanking(json, login) {
-  return (
-    json.findIndex(function (item, i) {
-      return item.login === login;
-    }) + 1
-  );
-}
-
 let authObj;
 // Get data from Github API and renders visualization
 const generateCharts = async (login, auth, data = []) => {
@@ -210,7 +202,7 @@ const generateCharts = async (login, auth, data = []) => {
       data[0],
       "#table1",
       "Sample Title1",
-      `Counts: Placed 0 at 0 sample metric 1`,
+      `Sample Metric 1 Count`,
       "ex1",
       ""
     );
@@ -218,7 +210,7 @@ const generateCharts = async (login, auth, data = []) => {
       data[1],
       "#table2",
       "Sample Title2",
-      `Counts: Placed 0 at 0 sample metric 2`,
+      `Sample Metric 2 Count`,
       "ex2",
       ""
     );
@@ -231,31 +223,25 @@ const generateCharts = async (login, auth, data = []) => {
     validateUserData(login).then((res) => {
       if (!res) {
         document.getElementById("status").innerHTML =
-          "Invalid Data, check input";
+          "Invalid Data, Check Input";
         initCharts();
       } else {
         document.getElementById("status").innerHTML =
-          "Valid Username and Auth token";
+          "Valid Username and Auth Token";
         getLoginData(login).then((data) => {
-          let ranking = getRanking(data[0], login);
           render(
             data[0],
             "#table1",
             "Mutual Following",
-            `Counts: Placed ${ranking} at ${
-              data[0][ranking - 1]["count"]
-            } mutual followers`,
+            `Mutual Followers Count`,
             "t1",
             ""
           );
-          ranking = getRanking(data[1], login);
           render(
             data[1],
             "#table2",
             "Total Repositories",
-            `Counts: Placed ${ranking} at ${
-              data[1][ranking - 1]["count"]
-            } repositories`,
+            `Repositories Count`,
             "t2",
             "?tab=repositories"
           );
@@ -285,15 +271,29 @@ document.getElementById("colorBtn").onclick = function () {
   clearBar();
   colorBar(login);
   const res = document.querySelectorAll(`[id$=${login}]`);
+  const rects = document.querySelectorAll("rect");
+  const resLen = res.length;
   res.forEach((entry) => {
     const prefix = entry.id.substring(0, entry.id.indexOf(":"));
     const textElement = document.getElementById(prefix);
     const res = entry.__data__;
+    let ranking = 0;
+    for (let i = 0; i < rects.length; i++) {
+      if (rects[i].id === entry.id) {
+        ranking = i + 1;
+        break;
+      }
+    }
+    const nTable = prefix.replace(/[^0-9]/g, "");
+    ranking = ranking - (rects.length / resLen) * (nTable - 1);
+    console.log(ranking);
     let previousText = textElement.textContent;
     const delimiterIndex = previousText.indexOf(":");
     if (delimiterIndex >= 0)
       previousText = previousText.substring(0, delimiterIndex);
-    textElement.innerHTML = previousText.concat(`: ${res.count}`);
+    textElement.innerHTML = previousText.concat(
+      `: ${res.count} at place ${ranking}`
+    );
   });
 };
 
